@@ -1,5 +1,4 @@
 use anyhow::Result;
-use category::SALARY_CAT;
 use chrono::NaiveDate;
 use clap::Parser;
 use config::Config;
@@ -36,7 +35,7 @@ async fn main() -> Result<()> {
 
 async fn print_amount_by_category(date: NaiveDate, salary: f32, pool: &SqlitePool) -> Result<()> {
     let mut transfers_cat = transfer::get_amount_by_category(date, &pool).await?;
-    transfers_cat.push((SALARY_CAT.to_string(), salary));
+    transfers_cat.push(("Salaire".to_string(), salary));
 
     for (cat, amount) in transfers_cat {
         println!("{cat} = {amount} euros");

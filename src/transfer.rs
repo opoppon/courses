@@ -74,17 +74,22 @@ pub async fn get_amount_by_category(
     let year_month = &date.to_string()[..7];
     let rows = sqlx::query_as(
         r#"
-    SELECT
-        CASE category
-            WHEN null THEN '__aucune__'
-            ELSE category
-        END AS category,
-        sum(value) AS amount
-    FROM transfer t
-    WHERE
-        substr (date,1,7) = ?
-        AND (category != ? OR category IS NULL)
-    GROUP BY category
+        SELECT
+            CASE
+                WHEN t.category IS NULL THEN '__aucune__'
+                ELSE c.label
+            END AS cat_label,
+            SUM(value) AS amount
+        FROM transfer t
+        LEFT JOIN category c ON c.code = t.category
+        WHERE
+            SUBSTR(date, 1, 7) = ?
+            AND (t.category != ? OR t.category IS NULL)
+        GROUP BY
+            CASE
+                WHEN t.category IS NULL THEN '__aucune__'
+                ELSE c.label
+            END;
     "#,
     )
     .bind(year_month)
@@ -121,12 +126,13 @@ pub async fn find_salary_on_date(date: NaiveDate, pool: &SqlitePool) -> Result<(
     let rows: (String, f32) = sqlx::query_as(
         r#"
         SELECT
-            category,
+            c.label AS category,
             value
-        FROM transfer
+        FROM transfer t
+        LEFT JOIN category c ON c.code = t.category
         WHERE
             substr(date,1,7) = ?
-            AND category = ?
+            AND t.category = ?
         "#,
     )
     .bind(year_month)
