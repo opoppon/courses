@@ -13,7 +13,3 @@ impl Config {
         self.date.unwrap_or(Local::now().date_naive())
     }
 }
-
-// fn parse_date(arg: &str) -> Result<NaiveDate> {
-//     Ok(arg.parse()?)
-// }

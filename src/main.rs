@@ -18,24 +18,28 @@ async fn main() -> Result<()> {
     info!("processus started");
     let (config, pool) = setup().await?;
     let date = config.get_date();
+
+    let _ = import_transactions(date, &pool).await;
+
+    print_amount_by_category(date, &pool).await?;
+    println!("===========================================");
+    print_total_amount(date, &pool).await?;
+    Ok(())
+}
+
+async fn import_transactions(date: NaiveDate, pool: &SqlitePool) -> Result<()> {
     let file_parser = BankFileParser::new(date);
 
     let transfers = file_parser.parse_file()?;
     for transfer in transfers {
-        let _ = transfer::create(&transfer, &pool).await;
+        let _ = transfer::create(&transfer, pool).await;
     }
 
-    let (_, salary) = transfer::get_salary_for_date(date, &pool).await?;
-
-    print_amount_by_category(date, salary, &pool).await?;
-    println!("===========================================");
-    print_total_amount(date, salary, &pool).await?;
     Ok(())
 }
 
-async fn print_amount_by_category(date: NaiveDate, salary: f32, pool: &SqlitePool) -> Result<()> {
-    let mut transfers_cat = transfer::get_amount_by_category(date, &pool).await?;
-    transfers_cat.push(("Salaire".to_string(), salary));
+async fn print_amount_by_category(date: NaiveDate, pool: &SqlitePool) -> Result<()> {
+    let transfers_cat = transfer::get_amount_by_category(date, &pool).await?;
 
     for (cat, amount) in transfers_cat {
         println!("{cat} = {amount} euros");
@@ -44,11 +48,10 @@ async fn print_amount_by_category(date: NaiveDate, salary: f32, pool: &SqlitePoo
     Ok(())
 }
 
-async fn print_total_amount(date: NaiveDate, salary: f32, pool: &SqlitePool) -> Result<()> {
+async fn print_total_amount(date: NaiveDate, pool: &SqlitePool) -> Result<()> {
     let (cat, amount) = transfer::get_total_amount(date, &pool).await?;
-    let final_amount = salary + amount;
 
-    println!("{cat} = {:.2} euros", final_amount);
+    println!("{cat} = {:.2} euros", amount);
 
     Ok(())
 }

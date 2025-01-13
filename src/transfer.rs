@@ -1,12 +1,10 @@
-use anyhow::{anyhow, Context, Result};
-use chrono::{Months, NaiveDate};
+use anyhow::Result;
+use chrono::NaiveDate;
 use sqlx::{prelude::FromRow, SqlitePool};
 
 use crate::category::SALARY_CAT;
 
-//const SALARY_LABEL: &str = "VIREMENT DE ARENC LOGISTIQUE";
-
-#[derive(Debug, Default, FromRow)]
+#[derive(Clone, Debug, Default, FromRow)]
 pub struct Transfer {
     pub date: NaiveDate,
     pub label: String,
@@ -84,7 +82,6 @@ pub async fn get_amount_by_category(
         LEFT JOIN category c ON c.code = t.category
         WHERE
             SUBSTR(date, 1, 7) = ?
-            AND (t.category != ? OR t.category IS NULL)
         GROUP BY
             CASE
                 WHEN t.category IS NULL THEN '__aucune__'
@@ -110,54 +107,11 @@ sum(value) AS amount
 FROM transfer t
 WHERE
     substr (date,1,7) = ?
-    AND (category != ? OR category IS NULL)
     "#,
     )
     .bind(year_month)
-    .bind(SALARY_CAT)
     .fetch_one(pool)
     .await?;
 
     Ok(rows)
-}
-
-pub async fn find_salary_on_date(date: NaiveDate, pool: &SqlitePool) -> Result<(String, f32)> {
-    let year_month = &date.to_string()[..7];
-    let rows: (String, f32) = sqlx::query_as(
-        r#"
-        SELECT
-            c.label AS category,
-            value
-        FROM transfer t
-        LEFT JOIN category c ON c.code = t.category
-        WHERE
-            substr(date,1,7) = ?
-            AND t.category = ?
-        "#,
-    )
-    .bind(year_month)
-    .bind(SALARY_CAT)
-    .fetch_one(pool)
-    .await?;
-
-    Ok(rows)
-}
-///tente de récuperer le salaire du mois précédent.
-///sinon celui du mois indiqué par date
-pub async fn get_salary_for_date(date: NaiveDate, pool: &SqlitePool) -> Result<(String, f32)> {
-    let mut salary = 0.0;
-    let last_month = date
-        .checked_sub_months(Months::new(1))
-        .ok_or_else(|| anyhow::anyhow!("calcul mois précédent"))
-        .context("calcul mois précédent")?;
-    dbg!(last_month);
-    if let Ok((_, amount)) = find_salary_on_date(last_month, &pool).await {
-        salary = amount;
-    } else if let Ok((_, amount)) = find_salary_on_date(date, &pool).await {
-        salary = amount;
-    } else {
-        let _: Result<(), anyhow::Error> = Err(anyhow!("Aucun salaire"));
-    }
-
-    Ok((SALARY_CAT.to_string(), salary))
 }
