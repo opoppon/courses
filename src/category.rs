@@ -1,7 +1,5 @@
 use sqlx::prelude::FromRow;
 
-pub const SALARY_CAT: &str = "salary";
-
 #[derive(Debug, FromRow)]
 pub struct Category {
     pub _code: String,
