@@ -10,7 +10,7 @@ pub struct TransferService {
 impl TransferService {
     pub async fn import_transactions(&self, transfers: &[Transfer]) -> Result<()> {
         for transfer in transfers {
-            let _ = self.repo.create(&transfer).await;
+            let _ = self.repo.create(transfer).await;
         }
     
         Ok(())

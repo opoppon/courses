@@ -1,6 +1,6 @@
 use anyhow::Result;
 use chrono::NaiveDate;
-use sqlx::{prelude::FromRow, SqlitePool};
+use sqlx::prelude::FromRow;
 
 #[derive(Clone, Debug, Default, FromRow)]
 pub struct Transfer {
