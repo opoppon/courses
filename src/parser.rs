@@ -1,7 +1,11 @@
-use std::fs;
+use std::{
+    fs::File,
+    io::Read,
+};
 
 use anyhow::Result;
 use chrono::NaiveDate;
+use encoding::{all::ISO_8859_1, DecoderTrap, Encoding};
 
 use crate::transfer::Transfer;
 
@@ -16,13 +20,18 @@ impl BankFileParser {
 
     pub fn parse_file(&self) -> Result<Vec<Transfer>> {
         let filename = self.get_filename();
-        let lines = fs::read_to_string(filename)?;
-        let lines = lines.lines().skip(7);
+        let mut file = File::open(filename)?;
+
+        let mut buffer = Vec::new();
+        file.read_to_end(&mut buffer)?;
+
+        let text = ISO_8859_1.decode(&buffer, DecoderTrap::Strict).unwrap();
+        let lines: Vec<String> = text.lines().skip(7).map(|line| line.to_string()).collect();
 
         let mut transfers = vec![];
 
         for line in lines {
-            if let Ok(t) = Transfer::from_str(line, self.date) {
+            if let Ok(t) = Transfer::from_str(&line, self.date) {
                 transfers.push(t);
             }
         }
